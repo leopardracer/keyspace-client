@@ -70,9 +70,10 @@ type BuildNextConfigArgs = {
   account: Address;
   currentConfigData: Hex;
   newConfigData: Hex;
+  provider: ProviderClientConfig;
 };
 
-export async function buildNextConfig(provider: ProviderClientConfig, { account, currentConfigData, newConfigData }: BuildNextConfigArgs): Promise<KeystoreConfig> {
+export async function buildNextConfig({ account, currentConfigData, newConfigData, provider }: BuildNextConfigArgs): Promise<KeystoreConfig> {
   const { configHash, configNonce } = await getMasterKeystoreStorage(provider, account);
   if (fromHex(configHash, "bigint") !== 0n) {
     const expectedConfigHash = hashConfig({ account, nonce: configNonce, data: currentConfigData });

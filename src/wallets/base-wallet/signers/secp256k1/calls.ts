@@ -29,12 +29,13 @@ export type MakeCallsParameters = {
  */
 export async function makeCalls({ account, ownerIndex, calls, privateKey, paymasterAndData, initialConfigData }: MakeCallsParameters) {
   initialConfigData ??= encodeConfigData(getConfigDataForPrivateKey(privateKey));
-  const op = await buildUserOp(client, {
+  const op = await buildUserOp({
     account,
     initialConfigData,
     calls,
     paymasterAndData: paymasterAndData ?? "0x",
     dummySignature: buildDummySignature(),
+    provider: client,
   });
 
   const hash = getUserOpHash({ userOperation: op, chainId: BigInt(chain.id) });

@@ -12,6 +12,7 @@ export type BuildUserOpParameters = {
   initialConfigData: Hex;
   paymasterAndData: Hex;
   dummySignature: Hex;
+  provider: ProviderClientConfig;
 }
 
 /**
@@ -25,16 +26,15 @@ export type BuildUserOpParameters = {
  * @returns A promise that resolves to a UserOperation object.
  * @throws Will throw an error if the sender's balance is less than the required prefund.
  */
-export async function buildUserOp(
-  client: PublicClient,
-  {
-    account,
-    initialConfigData,
-    calls,
-    paymasterAndData = "0x",
-    dummySignature,
-  }: BuildUserOpParameters
-): Promise<UserOperation> {
+export async function buildUserOp({
+  account,
+  initialConfigData,
+  calls,
+  paymasterAndData = "0x",
+  dummySignature,
+  provider,
+}: BuildUserOpParameters): Promise<UserOperation> {
+  const client = createCustomClient(provider);
   let initCode: Hex = "0x";
   if (!await getIsDeployed(client, account)) {
     const counterfactualAddress = await getAddress(client, { initialConfigData, nonce: 0n });
@@ -43,9 +43,9 @@ export async function buildUserOp(
     }
 
     initCode = getInitCode({
-      client,
       initialConfigData,
       nonce: 0n,
+      provider: client,
     });
   }
   const callData = buildUserOperationCalldata({ calls });
@@ -104,14 +104,15 @@ export async function buildUserOp(
  * @returns The generated initialization code.
  */
 export function getInitCode({
-  client,
   initialConfigData,
   nonce,
+  provider,
 }: {
-  client: PublicClient;
   initialConfigData: Hex;
   nonce: bigint;
+  provider: ProviderClientConfig;
 }): Hex {
+  const client = createCustomClient(provider);
   if (!client.chain?.id) {
     throw new Error("Chain not found");
   }

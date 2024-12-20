@@ -76,10 +76,11 @@ async function main() {
   const encodedNewConfigData = encodeConfigData(newConfigData);
   console.log("New config data:", encodedNewConfigData);
 
-  const newConfig = await buildNextConfig(masterClient, {
+  const newConfig = await buildNextConfig({
     account: args.account,
     currentConfigData: args.config_data,
     newConfigData: encodedNewConfigData,
+    provider: masterClient,
   });
 
   console.log(`Setting new config with nonce ${newConfig.nonce}...`);
