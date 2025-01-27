@@ -10,8 +10,6 @@ import { encodeConfigData } from "@/wallets/base-wallet/config";
 import { buildDummySignature } from "./signatures";
 import { hashConfig, KeystoreConfig } from "@/config";
 
-const jwk = JSON.parse(process.env.P256_JWK || "");
-export const p256PrivateKey: P256PrivateKey = P256.fromJWK(jwk);
 
 export type MakeCallsParameters = {
   account: Address;
@@ -40,6 +38,7 @@ export async function makeCalls({ account, ownerIndex, calls, privateKey, paymas
     paymasterAndData: paymasterAndData ?? "0x",
     dummySignature: buildDummySignature(),
     provider: client,
+    bundlerProvider: bundlerClient,
   });
 
   const hash = getUserOpHash({ userOperation: op, chainId: BigInt(chain.id) });

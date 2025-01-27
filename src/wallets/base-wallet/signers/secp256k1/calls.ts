@@ -36,6 +36,7 @@ export async function makeCalls({ account, ownerIndex, calls, privateKey, paymas
     paymasterAndData: paymasterAndData ?? "0x",
     dummySignature: buildDummySignature(),
     provider: client,
+    bundlerProvider: bundlerClient,
   });
 
   const hash = getUserOpHash({ userOperation: op, chainId: BigInt(chain.id) });

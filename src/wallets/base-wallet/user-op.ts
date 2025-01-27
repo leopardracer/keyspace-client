@@ -13,6 +13,7 @@ export type BuildUserOpParameters = {
   paymasterAndData: Hex;
   dummySignature: Hex;
   provider: ProviderClientConfig;
+  bundlerProvider: ProviderClientConfig;
 }
 
 /**
@@ -33,8 +34,10 @@ export async function buildUserOp({
   paymasterAndData = "0x",
   dummySignature,
   provider,
+  bundlerProvider,
 }: BuildUserOpParameters): Promise<UserOperation> {
   const client = createCustomClient(provider);
+  const bundlerClient = createCustomClient(bundlerProvider);
   let initCode: Hex = "0x";
   if (!await getIsDeployed(client, account)) {
     const counterfactualAddress = await getAddress(client, { initialConfigData, nonce: 0n });
@@ -68,8 +71,8 @@ export async function buildUserOp({
     paymasterAndData,
     signature: dummySignature,
     preVerificationGas: 5_000_000n,
-    verificationGasLimit: 1_000_000n,
-    callGasLimit: 1_000_000n,
+    verificationGasLimit: 5_000_000n,
+    callGasLimit: 5_000_000n,
     ...maxFeesPerGas,
   };
 
@@ -85,7 +88,7 @@ export async function buildUserOp({
 
   // NOTE: The gas limits provided in the user operation seem to override any
   // estimated limits, which makes this estimate redundant.
-  const gasLimits = await estimateUserOperationGas(client, {
+  const gasLimits = await estimateUserOperationGas(bundlerClient, {
     userOperation: op,
     entryPoint: entryPointAddress,
   });
