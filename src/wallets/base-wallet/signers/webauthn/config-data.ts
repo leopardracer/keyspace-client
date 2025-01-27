@@ -5,7 +5,7 @@ import { CoinbaseSmartWalletConfigData, encodeConfigData } from "../../config";
 /**
  * Encodes the given P256 private key as the raw bytes of the Base Wallet config data format.
  *
- * @param privateKey - The P256 private key as a hex string.
+ * @param privateKey - The P256 private key object.
  * @returns The config data as a hex string.
  */
 export function getConfigDataForPrivateKey(privateKey: any): CoinbaseSmartWalletConfigData {
@@ -28,11 +28,11 @@ export function getConfigDataForPublicKey(publicKey: Uint8Array): CoinbaseSmartW
  *
  * @param x - The x coordinate of the public key as a Uint8Array.
  * @param y - The y coordinate of the public key as a Uint8Array.
- * @returns The serialized public key as a Hex string.
+ * @returns The serialized public key as a Uint8Array.
  */
-export function serializePublicKeyFromPoint(x: Uint8Array, y: Uint8Array): Hex {
+export function serializePublicKeyFromPoint(x: Uint8Array, y: Uint8Array): Uint8Array {
   const keyspaceData = new Uint8Array(64);
   keyspaceData.set(x, 0);
   keyspaceData.set(y, 32);
-  return toHex(keyspaceData);
+  return keyspaceData;
 }

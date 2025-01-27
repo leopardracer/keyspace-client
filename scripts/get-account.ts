@@ -25,7 +25,6 @@ async function main() {
   let configData: CoinbaseSmartWalletConfigData;
   if (args.signature_type === "secp256k1") {
     configData = getConfigDataForSecp256k1PrivateKey(args.private_key);
-    console.log("Public key:", configData.owners[0]);
   } else if (args.signature_type === "webauthn") {
     const privateKey = P256.fromJWK(JSON.parse(args.private_key));
     configData = getConfigDataForWebAuthnPrivateKey(privateKey);
