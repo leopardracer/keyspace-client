@@ -1,14 +1,15 @@
 import { base64urlnopad } from "@scure/base";
 import {
-  decodeAbiParameters, encodePacked,
-  hexToBigInt,
+  decodeAbiParameters,
+  encodePacked,
   hexToBytes,
   sha256,
   stringToBytes,
   type Hex
 } from "viem";
 import { wrapSignature } from "../../user-op";
-import { encodeWebAuthnAuth } from "./signatures";
+import { encodeWebAuthnAuth, preventSignatureMalleability } from "./signatures";
+import { getConfigDataForPrivateKey } from "./config-data";
 
 export type P256PrivateKey = {
   x: Buffer;
@@ -36,12 +37,8 @@ export function p256WebAuthnSign(
   const clientDataJSONHash = sha256(stringToBytes(clientDataJSON));
   const message = encodePacked(["bytes", "bytes32"], [authenticatorData, clientDataJSONHash]);
   const sig = p256PrivateKey.sign(Buffer.from(message.slice(2), "hex"), "hex");
-  let [r, s] = decodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], `0x${sig}` as Hex);
-  // Restrict signature malleability to pass the check in webauthn-sol.
-  const n = hexToBigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
-  if (s > n / 2n) {
-    s = n - s;
-  }
+  const [unsafeR, unsafeS] = decodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], `0x${sig}` as Hex);
+  const {r, s} = preventSignatureMalleability({r: unsafeR, s: unsafeS});
   return { r, s, clientDataJSON, authenticatorData };
 }
 

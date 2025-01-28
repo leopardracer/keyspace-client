@@ -1,5 +1,5 @@
 import { base64urlnopad } from "@scure/base";
-import { Hex, encodeAbiParameters, stringToHex } from "viem";
+import { Hex, bytesToBigInt, decodeAbiParameters, encodeAbiParameters, hexToBigInt, hexToBytes, stringToHex } from "viem";
 import { wrapSignature } from "../../user-op";
 
 
@@ -72,4 +72,57 @@ export function encodeWebAuthnAuth(
       },
     ]
   );
+}
+
+/**
+ * Ensures the signature is not malleable to pass the check in webauthn-sol.
+ *
+ * @returns The signature components.
+ */
+export function preventSignatureMalleability({r, s}: { r: bigint; s: bigint; }): { r: bigint; s: bigint; } {
+  const n = hexToBigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
+  if (s > n / 2n) {
+    s = n - s;
+  }
+  return { r, s };
+}
+
+/**
+ * Decodes an ASN.1 sequence from a DER encoded signature.
+ *
+ * @param input - The DER encoded signature.
+ * @returns The decoded sequence.
+ */
+export function decodeASN1Sequence(input: Uint8Array): Uint8Array[] {
+  if (input[0] !== 0x30) {
+    throw new Error("Invalid ASN.1 sequence");
+  }
+  const seqLength = input[1];
+  const values = [];
+  let bytes = input.slice(2, 2 + seqLength);
+  while (bytes.length > 0) {
+    const tag = bytes[0];
+    if (tag !== 0x02) {
+      throw new Error("Invalid ASN.1 integersequence");
+    }
+    const valueLength = bytes[1];
+    const value = bytes.slice(2, 2 + valueLength);
+    values.push(value);
+    bytes = bytes.slice(2 + valueLength);
+  }
+  return values;
+}
+
+/**
+ * Converts a DER encoded signature to the format expected by the Base Wallet contracts.
+ *
+ * @param signature - The DER encoded signature.
+ * @returns The converted signature.
+ */
+export function convertDERSignature(signature: Hex): { r: bigint; s: bigint; } {
+  const input = hexToBytes(signature);
+  const values = decodeASN1Sequence(input);
+  const r = bytesToBigInt(values[0]);
+  const s = bytesToBigInt(values[1]);
+  return preventSignatureMalleability({ r, s });
 }
