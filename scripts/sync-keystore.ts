@@ -7,7 +7,7 @@ import * as chains from "viem/chains";
 import { getIsDeployed, getMasterChainId } from "../src/wallets/base-wallet/contract";
 import * as callsSecp256k1 from "../src/wallets/base-wallet/signers/secp256k1/calls";
 import * as callsWebAuthn from "../src/wallets/base-wallet/signers/webauthn/calls";
-import { buildConfirmConfigCalldata, hashConfig } from "../src/config";
+import { buildSyncConfigCalldata, hashConfig } from "../src/config";
 import { Call } from "../src/wallets/base-wallet/user-op";
 const P256 = require("ecdsa-secp256r1");
 
@@ -95,9 +95,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Call confirmConfig on the replica chain with the Config struct and the proof.
+  // Call syncConfig on the replica chain with the Config struct and the proof.
   const keystoreProof = encodeOPStackProof(keystoreProofs);
-  const data = buildConfirmConfigCalldata(currentConfig, keystoreProof);
+  const data = buildSyncConfigCalldata(currentConfig, keystoreProof);
 
   const calls: Call[] = [{
     index: 0,

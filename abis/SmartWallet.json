@@ -52,7 +52,7 @@
   },
   {
     "type": "function",
-    "name": "confirmConfig",
+    "name": "syncConfig",
     "inputs": [
       {
         "name": "newConfirmedConfig",

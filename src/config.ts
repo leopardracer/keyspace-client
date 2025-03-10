@@ -58,10 +58,10 @@ export function buildSetConfigCalldata(config: KeystoreConfig, authorizationProo
   });
 }
 
-export function buildConfirmConfigCalldata(config: KeystoreConfig, keystoreProof: Hex) {
+export function buildSyncConfigCalldata(config: KeystoreConfig, keystoreProof: Hex) {
   return encodeFunctionData({
     abi: accountAbi,
-    functionName: "confirmConfig",
+    functionName: "syncConfig",
     args: [config, keystoreProof],
   });
 }

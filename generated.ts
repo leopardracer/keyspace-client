@@ -42,7 +42,7 @@ export const accountAbi = [
       },
       { name: 'keystoreProof', internalType: 'bytes', type: 'bytes' },
     ],
-    name: 'confirmConfig',
+    name: 'syncConfig',
     outputs: [],
     stateMutability: 'nonpayable',
   },
