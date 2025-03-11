@@ -11,7 +11,7 @@ Beyond adding and removing signers, cross-chain syncing introduces additional co
 
 A wallet's configuration is deeply intertwined with the implementation contract that reads that configuration. Upgrading a wallet's implementation alone could break if it could not read the existing configuration, and updating the configuration without upgrading the implementation could break if the new implementation expects a new configuration. Keyspace can help wallet vendors implement atomic upgrades that ensure both the configuration and the implementation are upgraded at the same time.
 
-To do this, the implementation address for the wallet can be stored in the keystore configuration that is synced across chains. Your wallet's [`_hookApplyNewConfig`](/keystore-basics#_hookapplynewconfig) is responsible for detecting the new implementation address and performing the upgrade. This new implementation address needs to be deployed on each chain supported by the wallet or the wallet will not be usable on those chains after syncing.
+To do this, the implementation address for the wallet can be stored in the keystore configuration that is synced across chains. Your wallet's [`_hookApplyConfig`](/keystore-basics#_hookapplynewconfig) is responsible for detecting the new implementation address and performing the upgrade. This new implementation address needs to be deployed on each chain supported by the wallet or the wallet will not be usable on those chains after syncing.
 
 :::note
 If your wallet provides direct access to `upgradeTo` or the equivalent for your proxy contract, the implementation can be overwritten without using Keyspace, and since this change will not be synced, the user will end up with inconsistent behavior across chains. Without care, this could lead to unexpected behavior.
@@ -39,11 +39,9 @@ If cross-chain Merkle proofs have stopped working due to hard forks, another way
 
 Recovery guardians affect whether the wallet can be activated on a new chain. Recovery guardians are typically stateful: the recovery is initiated on a blockchain, then can only be processed after a delay that is verified by proving the elapsed time since the recovery was initiated. Since recovery guardians require external state to be verified, they are not guaranteed to always successfully re-execute as setConfig calls on new replica chains indefinitely.
 
-In the current version of Keyspace, the way to build a recovery guardian is to write it as a periphery contract that is added as a signer to the wallet. When the conditions for the guardian are met, it calls `setConfig` directly on the wallet. `_hookIsNewConfigAuthorized` can then check `msg.sender` to verify that the guardian's address is authorized in the wallet's configuration.
+The most straightforward way to build a recovery guardian with Keyspace is to write it as a periphery contract that is added as a signer to the wallet. When the conditions for the guardian are met, it calls `setConfig` directly on the wallet. `_hookIsConfigAuthorized` can then check `msg.sender` to verify that the guardian's address is authorized in the wallet's configuration.
 
-This type of configuration change is not as straightforward to re-execute on other chains: instead of just calling `setConfig` with each authorization proof, the user would need to call the recovery guardian itself to initiate the configuration change. In future versions of Keyspace, we're considering making block headers available to `setConfig`, which would allow recovery guardians to be implemented as extensions to a wallet's `_hookIsNewConfigAuthorized` method. This would allow these recoveries to be re-executed as setConfig calls on other chains.
-
-No matter how recovery guardians are implemented, if they require state to be proven to authorize the recovery, they will need access to an L1 state root, which we expect to be fragile. The wallet's implementation contract at the time of the recovery has hard-coded logic for verifying the block header that is passed to the guardian. Once that logic is no longer valid due to a hard fork, the user will no longer be able to easily claim their wallet address on new chains. Syncing will still be possible via the slow, expensive fallback method of withdrawal and deposit transactions.
+This type of configuration change is not as straightforward to re-execute on other chains: instead of just calling `setConfig` with each authorization proof, the user would need to call the recovery guardian itself to initiate the configuration change. Instead of replaying recovery guardian configuration changes, wallets should sync from the master chain to get the latest configuration. Syncing is also required to claim the wallet's address on new chains, and since cross-chain proofs are fragile across hard forks, syncing via withdrawal and deposit transactions becomes even more important for wallets that have used recovery guardians to change their configuration: it's the only way for them to use new chains.
 
 Until cheap cross-chain state proofs are robust, we recommend that wallet vendors treat recovery guardians as a method of **asset recovery**, not as a method of **wallet recovery**. That is, once the guardian restores access to the wallet's assets, the user should be encouraged to create a new wallet address and move their assets to it.
 
@@ -53,11 +51,10 @@ To support as many chains as possible, wallet factories should aim for permissio
 
 * Deploy the original, current, and any intermediate wallet implementation contracts on the new chain
 * Deploy the wallet factory contract on the new chain
-* Configure the bundler for the new chain to whitelist [our cross-chain storage reads](/using-new-signers#cross-contract-storage-reads)
 
 ## Syncing after Hard Forks
 
-Wallet vendors must be prepared to review every hard fork on L1 and every rollup they support. When necessary, they should implement the changes required to upgrade the wallet's implementation of cross-chain Merkle proof verification. If the upgrade isn't performed before the fork, the wallet will need a setConfig call to upgrade the implementation on each replica chain for any sync after the eventual consistency period ends, so the wallet client will need to present the user with a mandatory upgrade. (The implementation contract with broken cross-chain Merkle proof verification can still be used if the wallet is synced via withdrawal and deposit transactions, but since that's costly and slow, we expect wallet vendors to avoid this situation.)
+Wallet vendors must be prepared to review every hard fork on L1 and every rollup they support. When necessary, they should implement the changes required to upgrade the wallet's implementation of cross-chain Merkle proof verification. If the upgrade isn't performed before the fork, syncing will need to rely on withdrawal and deposit transactions.
 
 Here are the types of hard forks that wallet vendors should be prepared for:
 
@@ -78,11 +75,3 @@ Here are the types of hard forks that wallet vendors should be prepared for:
 * L1 state root access
   * L1Block.hash changes
   * EIP 4788 changes
-
-:::note
-Hard forks forced a design compromise in Keyspace: eventual consistency is not enforced for configuration changes to allow contracts to be upgraded when syncing is broken. This currently prevents signer revocations from being finalized through syncing on all current and future chains, which is an end goal for most wallet designs.
-
-If syncing were required for configuration changes, the wallet would be forced to rely on the slow, expensive fallback method of withdrawal and deposit transactions to sync wallets across hard forks. To understand what this would look like, here's an example dialog that might be presented to a user:
-
-> Your account needs to be restored due to inactivity. Restoring your account will take about four days, and requires paying a gas fee of $30 on Ethereum mainnet.
-:::
